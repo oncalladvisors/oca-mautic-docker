@@ -1,0 +1,78 @@
+server {
+    listen 80;
+
+    root /app;
+    index index.html index.htm index.php;
+    error_page 404 /index.php;
+
+    # Make site accessible from http://set-ip-address.xip.io
+    server_name localhost;
+
+    access_log /var/log/nginx/access.log;
+    error_log  /var/log/nginx/error.log error;
+
+    # Stuff for OctoberCMS
+    if (!-e $request_filename)
+    {
+        rewrite ^/(.*)$ /index.php?/$1 break;
+        break;
+    }
+    rewrite ^themes/.*/(layouts|pages|partials)/.*.htm /index.php break;
+    rewrite ^uploads/protected/.* /index.php break; # leftover files from laravel 4
+    rewrite ^bootstrap/.* /index.php break;
+    rewrite ^config/.* /index.php break;
+    rewrite ^vendor/.* /index.php break;
+    rewrite ^storage/cms/.* /index.php break;
+    rewrite ^storage/logs/.* /index.php break;
+    rewrite ^storage/framework/.* /index.php break;
+    rewrite ^storage/temp/protected/.* /index.php break;
+    rewrite ^storage/app/uploads/protected/.* /index.php break;
+
+    charset utf-8;
+
+    location / {
+		# First attempt to serve request as file, then
+		# as directory, then fall back to index.html
+        try_files $uri $uri/ /index.php$is_args$args;
+ 		# Uncomment to enable naxsi on this location
+		# include /etc/nginx/naxsi.rules
+	}
+
+    location = /favicon.ico {
+    	log_not_found off;
+    	access_log off;
+    }
+
+    location = /robots.txt  {
+    	access_log off;
+    	log_not_found off;
+    }
+
+	# pass the PHP scripts to FastCGI server listening on 127.0.0.1:9000
+	#
+	location ~ \.php$ {
+		fastcgi_split_path_info ^(.+\.php)(/.+)$;
+		# NOTE: You should have "cgi.fix_pathinfo = 0;" in php.ini
+
+		fastcgi_pass unix:/var/run/php5-fpm.sock;
+		fastcgi_index index.php;
+		include fastcgi_params;
+
+        fastcgi_buffer_size 128k;
+        fastcgi_buffers 256 16k;
+        fastcgi_busy_buffers_size 256k;
+        fastcgi_temp_file_write_size 256k;
+	}
+
+    # Deny .htaccess file access
+    location ~ /\.ht {
+        deny all;
+    }
+
+    # Deny all attempts to access hidden files such as .htaccess, .htpasswd, .DS_Store (Mac), .docker folder
+    location ~ /\. {
+        deny all;
+        access_log off;
+        log_not_found off;
+    }
+}

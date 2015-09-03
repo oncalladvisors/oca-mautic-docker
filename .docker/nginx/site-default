@@ -18,9 +18,9 @@ server {
         break;
     }
     # rewrite ^themes/.*/(layouts|pages|partials)/.*.htm /index.php break;
-    rewrite ^app/bundles/config/.* /index.php break; # leftover files from laravel 4
+    rewrite ^app/bundles/config/.* /index.php break;
     rewrite ^app/migrations/.* /index.php break;
-    rewrite ^config/.* /index.php break;
+    rewrite ^app/config/.* /index.php break;
     rewrite ^vendor/.* /index.php break;
     rewrite ^app/log/.* /index.php break;
 
@@ -76,5 +76,12 @@ server {
         deny all;
         access_log off;
         log_not_found off;
+    }
+
+    location ^~ /app/bundle {
+        allow all;
+    }
+    location ^~ /app/ {
+        deny all;
     }
 }

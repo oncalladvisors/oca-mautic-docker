@@ -1,44 +1,63 @@
 #!/bin/bash
-# these are actions that need to be done after boot, not after build.  This is because we don't have DB access in build
-#    because env vars aren't available yet.
-APPDIR="/app"
+ # from docker-entrypoint on mautic/docker file
+set -e
 
-#run composer and log to syslog.
-cd /app
-COMPOSER_HOME="/root" composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
+if [ -n "$MYSQL_PORT_3306_TCP" ]; then
+        if [ -z "$MAUTIC_DB_HOST" ]; then
+                MAUTIC_DB_HOST='mysql'
+        else
+                echo >&2 "warning: both MAUTIC_DB_HOST and MYSQL_PORT_3306_TCP found"
+                echo >&2 "  Connecting to MAUTIC_DB_HOST ($MAUTIC_DB_HOST)"
+                echo >&2 "  instead of the linked mysql container"
+        fi
+fi
 
-## run composer in each plugin directory
+if [ -z "$MAUTIC_DB_HOST" ]; then
+        echo >&2 "error: missing MAUTIC_DB_HOST and MYSQL_PORT_3306_TCP environment variables"
+        echo >&2 "  Did you forget to --link some_mysql_container:mysql or set an external db"
+        echo >&2 "  with -e MAUTIC_DB_HOST=hostname:port?"
+        exit 1
+fi
 
-# http://stackoverflow.com/questions/3769137/use-git-log-command-in-another-folder
-# http://briancoyner.github.io/blog/2013/06/05/git-sparse-checkout/
-# note: https://github.com/dokku-alt/dokku-alt/issues/74
-# run composer at boot so that it goes faster b/c vendor is a docker volumes
-cd /app && COMPOSER_HOME="/root" composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
+# If the DB user is 'root' then use the MySQL root password env var
+: ${MAUTIC_DB_USER:=root}
+if [ "$MAUTIC_DB_USER" = 'root' ]; then
+        : ${MAUTIC_DB_PASSWORD:=$MYSQL_ENV_MYSQL_ROOT_PASSWORD}
+fi
+: ${MAUTIC_DB_NAME:=mautic}
 
-for d in $APPDIR/plugins/*/*/ ; do
-    if [ -f "${d}composer.json" ]; then
-        echo "--------------------------------------"
-        echo "Running composer for $d"
-        echo "--------------------------------------"
-        cd $d
-        COMPOSER_HOME="/root" composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
-    fi
-done
+if [ -z "$MAUTIC_DB_PASSWORD" ]; then
+        echo >&2 "error: missing required MAUTIC_DB_PASSWORD environment variable"
+        echo >&2 "  Did you forget to -e MAUTIC_DB_PASSWORD=... ?"
+        echo >&2
+        echo >&2 "  (Also of interest might be MAUTIC_DB_USER and MAUTIC_DB_NAME.)"
+        exit 1
+fi
 
-# Back to the main main directory
-#cd $APPDIR
+if ! [ -e index.php -a -e app/AppKernel.php ]; then
+        echo >&2 "Mautic not found in $(pwd) - breaking now..."
+        break
+fi
 
-### Some laravel cleanup and optimizing
-##clear laravel cache
-#/usr/bin/php artisan cache:clear
-## run october migrations if there is new code
-#/usr/bin/php artisan october:up
-## optimize it.
-#mkdir -p $APPDIR/resources/views #artisan optimize needs this dir
-#/usr/bin/php artisan optimize
+# Ensure the MySQL Database is created
+php /build/.docker/makedb.php "$MAUTIC_DB_HOST" "$MAUTIC_DB_USER" "$MAUTIC_DB_PASSWORD" "$MAUTIC_DB_NAME"
 
-#make everyting read/writable from www-data
-chown -R www-data:www-data /app
+echo >&2 "========================================================================"
+echo >&2
+echo >&2 "This server is now configured to run Mautic!"
+echo >&2 "You will need the following database information to install Mautic:"
+echo >&2 "Host Name: $MAUTIC_DB_HOST"
+echo >&2 "Database Name: $MAUTIC_DB_NAME"
+echo >&2 "Database Username: $MAUTIC_DB_USER"
+echo >&2 "Database Password: $MAUTIC_DB_PASSWORD"
+echo >&2
+echo >&2 "========================================================================"
 
-/build/.docker/after-boot-actions/docker-entrypoint.sh
+# Write the database connection to the config so the installer prefills it
+if ! [ -e app/config/local.php ]; then
+        php /build/.docker/makeconfig.php "$MAUTIC_DB_HOST" "$MAUTIC_DB_USER" "$MAUTIC_DB_PASSWORD" "$MAUTIC_DB_NAME"
+
+        # Make sure our web user owns the config file if it exists
+        chown www-data:www-data /app/app/config/local.php
+fi
 

@@ -8,7 +8,6 @@ RUN cd /app && git checkout Production
 ADD ./.docker /build/.docker
 
 RUN chmod +x /build/.docker/*/*.sh
-RUN chmod +x /build/.docker/*.sh
 
 RUN composer self-update
 

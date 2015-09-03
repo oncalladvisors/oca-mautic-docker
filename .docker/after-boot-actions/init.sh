@@ -40,5 +40,5 @@ done
 #make everyting read/writable from www-data
 chown -R www-data:www-data /app
 
-/build/docker-entrypoint.sh
+/build/.docker/docker-entrypoint.sh
 

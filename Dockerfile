@@ -5,7 +5,7 @@ RUN rm -rf /app
 RUN git clone https://github.com/oncalladvisors/mautic.git /app
 RUN cd /app && git checkout Production
 
-ADD ./.docker /build/
+ADD ./.docker /build/.docker
 
 RUN chmod +x /build/.docker/*/*.sh
 

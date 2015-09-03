@@ -1,4 +1,6 @@
 server {
+    # see: http://wiki.nginx.org/Pitfalls
+    # see: http://wiki.nginx.org/IfIsEvil
     listen 80;
 
     root /app;
@@ -11,13 +13,10 @@ server {
     access_log /var/log/nginx/access.log;
     error_log  /var/log/nginx/error.log error;
 
-    # Deny all the app stuff down below... rather than here.
-    rewrite ^app/migrations/.* /index.php break;
-    rewrite ^app/config/.* /index.php break;
-    rewrite ^app/log/.* /index.php break;
-    rewrite ^vendor/.* /index.php break;
-    rewrite ^translations/.* /index.php break;
-    rewrite ^build/.* /index.php break;
+    # "Deny" some entire folders
+    rewrite ^/vendor/.* /index.php break;
+    rewrite ^/translations/.* /index.php break;
+    rewrite ^/build/.* /index.php break;
 
     charset utf-8;
 
@@ -25,7 +24,7 @@ server {
 		# First attempt to serve request as file, then
 		# as directory, then fall back to index.html
         # one option: try_files $uri $uri/ /index.php$is_args$args;
-        try_files $uri /index.php$is_args$args;
+        try_files $uri $uri/ /index.php$is_args$args;
  		# Uncomment to enable naxsi on this location
 		# include /etc/nginx/naxsi.rules
 	}
@@ -43,6 +42,7 @@ server {
 	# pass the PHP scripts to FastCGI server listening on 127.0.0.1:9000
 	#
 	location ~ \.php$ {
+      	# try_files $uri =403;
 		fastcgi_split_path_info ^(.+\.php)(/.+)$;
 		# NOTE: You should have "cgi.fix_pathinfo = 0;" in php.ini
 
@@ -78,9 +78,12 @@ server {
         log_not_found off;
     }
 
-    location ^~ /app/bundle {
+    # Allow anything in the assets folder under bundles.
+    location ^~ /app/bundles/.*/Assets/ {
         allow all;
     }
+
+    # Deny everything else in /app folder except Assets folder in bundles
     location ^~ /app/ {
         deny all;
     }

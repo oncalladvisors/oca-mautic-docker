@@ -11,18 +11,13 @@ server {
     access_log /var/log/nginx/access.log;
     error_log  /var/log/nginx/error.log error;
 
-    # Stuff for OctoberCMS
-    if (!-e $request_filename)
-    {
-        rewrite ^/(.*)$ /index.php?/$1 break;
-        break;
-    }
-    # rewrite ^themes/.*/(layouts|pages|partials)/.*.htm /index.php break;
-    rewrite ^app/bundles/config/.* /index.php break;
+    # Deny all the app stuff down below... rather than here.
     rewrite ^app/migrations/.* /index.php break;
     rewrite ^app/config/.* /index.php break;
-    rewrite ^vendor/.* /index.php break;
     rewrite ^app/log/.* /index.php break;
+    rewrite ^vendor/.* /index.php break;
+    rewrite ^translations/.* /index.php break;
+    rewrite ^build/.* /index.php break;
 
     charset utf-8;
 
@@ -68,6 +63,11 @@ server {
 
     # Deny .yml file access
     location ~ /\.yml {
+        deny all;
+    }
+
+    # Deny .ini file access
+    location ~ /\.ini {
         deny all;
     }
 

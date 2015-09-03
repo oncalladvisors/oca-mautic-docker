@@ -4,7 +4,7 @@
 APPDIR="/app"
 
 #run composer
-cd /app COMPOSER_HOME="/root" && composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
+cd /app && COMPOSER_HOME="/root" composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
 
  # from docker-entrypoint on mautic/docker file
 

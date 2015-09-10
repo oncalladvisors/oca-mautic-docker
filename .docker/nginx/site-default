@@ -13,78 +13,97 @@ server {
     access_log /var/log/nginx/access.log;
     error_log  /var/log/nginx/error.log error;
 
-    # "Deny" some entire folders
-    rewrite ^/vendor/.* /index.php break;
-    rewrite ^/translations/.* /index.php break;
-    rewrite ^/build/.* /index.php break;
-
     charset utf-8;
+
+    # redirect index.php to root
+    rewrite ^/index.php/(.*) /$1  permanent;
+
+    #######################################
+    ##  Start Mautic Specific config #####
+    #######################################
+
+    # redirect some entire folders
+    rewrite ^/(vendor|translations|build)/.* /index.php break;
 
     location / {
 		# First attempt to serve request as file, then
 		# as directory, then fall back to index.html
         # one option: try_files $uri $uri/ /index.php$is_args$args;
-        try_files $uri $uri/ /index.php$is_args$args;
+        try_files $uri /index.php$is_args$args;
  		# Uncomment to enable naxsi on this location
 		# include /etc/nginx/naxsi.rules
 	}
 
+    # Deny everything else in /app folder except Assets folder in bundles
+    location ~ /app/bundles/.*/Assets/ {
+        allow all;
+        access_log off;
+    }
+    location ~ /app/ { deny all; }
+
+    # Deny everything else in /addons or /plugins folder except Assets folder in bundles
+    location ~ /(addons|plugins)/.*/Assets/ {
+        allow all;
+        access_log off;
+    }
+    location ~ /(addons|plugins)/ { deny all; }
+
+    # Deny all php files in themes folder
+    location ~* ^/themes/(.*)\.php {
+        deny all;
+    }
+
+    # Don't log favicon
     location = /favicon.ico {
     	log_not_found off;
     	access_log off;
     }
 
+    # Don't log robots
     location = /robots.txt  {
     	access_log off;
     	log_not_found off;
     }
 
-	# pass the PHP scripts to FastCGI server listening on 127.0.0.1:9000
-	#
-	location ~ \.php$ {
-      	# try_files $uri =403;
-		fastcgi_split_path_info ^(.+\.php)(/.+)$;
-		# NOTE: You should have "cgi.fix_pathinfo = 0;" in php.ini
-
-		fastcgi_pass unix:/var/run/php5-fpm.sock;
-		fastcgi_index index.php;
-		include fastcgi_params;
-
-        fastcgi_buffer_size 128k;
-        fastcgi_buffers 256 16k;
-        fastcgi_busy_buffers_size 256k;
-        fastcgi_temp_file_write_size 256k;
-	}
-
-    # Deny .htaccess file access
-    location ~ /\.ht {
+    # Deny yml, twig, markdown, init file access
+    location ~* /(.*)\.(?:markdown|md|twig|yaml|yml|ht|htaccess|ini)$ {
         deny all;
+        access_log off;
+        log_not_found off;
     }
 
-    # Deny .yml file access
-    location ~ /\.yml {
-        deny all;
-    }
-
-    # Deny .ini file access
-    location ~ /\.ini {
-        deny all;
-    }
-
-    # Deny all attempts to access hidden files such as .htaccess, .htpasswd, .DS_Store (Mac), .docker folder
+    # Deny all attempts to access hidden files/folders such as .htaccess, .htpasswd, .DS_Store (Mac), etc...
     location ~ /\. {
         deny all;
         access_log off;
         log_not_found off;
     }
 
-    # Allow anything in the assets folder under bundles.
-    location ^~ /app/bundles/.*/Assets/ {
-        allow all;
+    # Deny all grunt, composer files
+    location ~* (Gruntfile|package|composer)\.(js|json)$ {
+        deny all;
+        access_log off;
+        log_not_found off;
     }
 
-    # Deny everything else in /app folder except Assets folder in bundles
-    location ^~ /app/ {
-        deny all;
-    }
+    #######################################
+    ##  End Mautic Specific config #####
+    #######################################
+
+    # pass the PHP scripts to FastCGI server listening on 127.0.0.1:9000
+	#
+	location ~ \.php$ {
+        # try_files $uri =403;
+        fastcgi_split_path_info ^(.+\.php)(/.+)$;
+        # NOTE: You should have "cgi.fix_pathinfo = 0;" in php.ini
+
+        fastcgi_pass unix:/var/run/php5-fpm.sock;
+        fastcgi_index index.php;
+        include fastcgi_params;
+
+        fastcgi_buffer_size 128k;
+        fastcgi_buffers 256 16k;
+        fastcgi_busy_buffers_size 256k;
+        fastcgi_temp_file_write_size 256k;
+	}
 }

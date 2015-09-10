@@ -9,7 +9,7 @@ cd /app && COMPOSER_HOME="/root" composer install --no-dev --prefer-dist --optim
  # from docker-entrypoint on mautic/docker file
 
 # Write the database connection to the config so the installer prefills it
-if ! [ -e /app/app/config/local.php ]; then
+if ! [ -e /app/app/config/config_local.php ]; then
         php /build/.docker/makeconfig.php "$MAUTIC_DB_HOST" "$MAUTIC_DB_USER" "$MAUTIC_DB_PASSWORD" "$MAUTIC_DB_NAME"
 
         # Make sure our web user owns the config file if it exists

@@ -25,7 +25,7 @@ $parameters = array(
     'install_source' => 'Docker'
 );
 
-$path     = '/app/app/config/local.php';
+$path     = '/app/app/config/config_local.php';
 $rendered = render($parameters);
 
 $status = file_put_contents($path, $rendered);

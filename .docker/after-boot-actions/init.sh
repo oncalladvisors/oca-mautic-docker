@@ -13,7 +13,7 @@ if ! [ -e /app/app/config/config_local.php ]; then
         php /build/.docker/makeconfig.php "$MAUTIC_DB_HOST" "$MAUTIC_DB_USER" "$MAUTIC_DB_PASSWORD" "$MAUTIC_DB_NAME"
 
         # Make sure our web user owns the config file if it exists
-        chown www-data:www-data /app/app/config/local.php
+        chown www-data:www-data /app/app/config/config_local.php
 fi
 
 chown -R www-data:www-data /app

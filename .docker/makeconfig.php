@@ -1,31 +1,36 @@
 <?php
-// Args: 0 => makedb.php, 1 => "$MAUTIC_DB_HOST", 2 => "$MAUTIC_DB_USER", 3 => "$MAUTIC_DB_PASSWORD", 4 => "$MAUTIC_DB_NAME"
+// This file was copied (then modified) from https://github.com/mautic/docker-mautic
+/*
+ * This file will read from the container_environment variables (https://github.com/phusion/baseimage-docker#environment_variables)
+ *  and any env variable that starts with mautic_ (nOT CasE SenSiTIve) it will add a `getenv('envVarNam')` to
+ *  parameters_local.php.  This will override anything in the local.php and keep your sensitive data out of the local.php file
+ *
+ */
+
+
 $stderr = fopen('php://stderr', 'w');
 
-fwrite($stderr, "\nWriting initial Mautic config\n");
+fwrite($stderr, "\nWriting Mautic config\n");
 
-// Figure out if we have a port in the database host string
-if (strpos($argv[1], ':') !== false)
-{
-    list($host, $port) = explode(':', $argv[1], 2);
-}
-else
-{
-    $host = $argv[1];
-    $port = 3306;
-}
+// Get all environment variables
+$envVars = json_decode(file_get_contents('/etc/container_environment.json'));
 
+// Set some initial defaults
 $parameters = array(
-    'db_driver'      => 'pdo_mysql',
-    'db_host'        => $host,
-    'db_port'        => $port,
-    'db_name'        => $argv[4],
-    'db_user'        => $argv[2],
-    'db_password'    => $argv[3],
+    'db_port' => 3306,
     'install_source' => 'Docker'
 );
 
-$path     = '/app/app/config/config_local.php';
+foreach ($envVars as $key => $value){
+    // if it starts with mautic_ (not case sensitive), add it to the parameters
+    if(startsWith(strtolower($key), 'mautic_')){
+        // write getenv('keyname') in the config, don't write put the actual value b/c I don't want to
+        //     store sensitive data inside the container.
+        $parameters[str_replace('mautic_', '', strtolower($key))] = "getenv('$key')";
+    }
+}
+
+$path     = '/app/app/config/parameters_local.php';
 $rendered = render($parameters);
 
 $status = file_put_contents($path, $rendered);
@@ -52,7 +57,11 @@ function render(array $parameters)
         {
             if (is_string($value))
             {
-                $value = "'" . addslashes($value) . "'";
+                if(startsWith($value, 'getenv(')){
+                    $value = "$value";
+                }else {
+                    $value = "'" . addslashes($value) . "'";
+                }
             }
             elseif (is_bool($value))
             {
@@ -121,4 +130,10 @@ function renderArray(array $array, $addClosingComma = false)
     }
 
     return $string;
+}
+
+
+function startsWith($haystack, $needle) {
+    // search backwards starting from haystack length characters from the end
+    return $needle === "" || strrpos($haystack, $needle, -strlen($haystack)) !== FALSE;
 }

@@ -13,6 +13,7 @@ if ! [ -e /app/app/config/parameters_local.php ]; then
 
         # Make sure our web user owns the config file if it exists
         chown www-data:www-data /app/app/config/parameters_local.php
+        /app/app/console cache:clear && chown -R www-data:www-data /app/app/cache/
 fi
 
 chown -R www-data:www-data /app

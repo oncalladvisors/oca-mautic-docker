@@ -17,7 +17,7 @@ if ! [ -e /app/app/config/parameters_local.php ]; then
 fi
 
 # set the local config to be in a location thats easy to use a docker volume.
-echo "$paths['local_config'] = '/appconfigs/local.php';" > /app/app/config/paths_local.php
+mv /build/.docker/paths_local.php /app/app/config/paths_local.php
 
 chown -R www-data:www-data /app
 

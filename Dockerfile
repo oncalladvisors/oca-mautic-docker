@@ -2,8 +2,8 @@ FROM that0n3guy/baseimage-nginx-phpfpm
 # https://registry.hub.docker.com/u/tutum/apache-php/dockerfile/
 
 RUN rm -rf /app
-RUN git clone https://github.com/oncalladvisors/mautic.git /app
-RUN cd /app && git checkout Production
+RUN git clone https://github.com/mautic/mautic.git /app
+RUN cd /app && git checkout 1.2.0
 
 ADD ./.docker /build/.docker
 
